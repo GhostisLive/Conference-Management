@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
@@ -11,33 +11,30 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Mail, ArrowRight } from "lucide-react"
 import { motion } from "framer-motion"
 
-const ForgotPassword = () => {
+export default function ForgotPassword() {
   const [email, setEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      setError(null)
-      setMessage(null)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setMessage(null)
 
-      try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        })
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
 
-        if (error) throw error
+      if (error) throw error
 
-        setMessage("Password reset link sent to your email.")
-      } catch (error) {
-        setError("Failed to send reset password email. Please try again.")
-      }
-    },
-    [email, supabase.auth],
-  )
+      setMessage("Password reset link sent to your email.")
+    } catch (error) {
+      setError("Failed to send reset password email. Please try again.")
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-blue-900">
@@ -93,6 +90,4 @@ const ForgotPassword = () => {
     </div>
   )
 }
-
-export default React.memo(ForgotPassword)
 

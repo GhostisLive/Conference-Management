@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,21 +10,20 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ArrowRight, RefreshCw } from "lucide-react"
 import { motion } from "framer-motion"
 
-const VerifyOTP = () => {
+export default function VerifyOTP() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [countdown, setCountdown] = useState(600) // 10 minutes in seconds
   const [canResend, setCanResend] = useState(false)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const email = searchParams.get("email")
 
   useEffect(() => {
+    const email = localStorage.getItem("verificationEmail")
     if (!email) {
       router.push("/register")
     }
-  }, [email, router])
+  }, [router])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -41,66 +40,63 @@ const VerifyOTP = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        if (!email) {
-          throw new Error("Email not found. Please try signing up again.")
-        }
-
-        const { data, error } = await supabase.auth.verifyOtp({
-          email,
-          token: otp.join(""),
-          type: "signup",
-        })
-
-        if (error) throw error
-
-        router.push("/dashboard")
-      } catch (error: any) {
-        if (error.message.includes("Invalid otp")) {
-          setError("Invalid verification code. Please check and try again.")
-        } else if (error.message.includes("Token has expired")) {
-          setError("Verification code has expired. Please request a new one.")
-        } else {
-          setError("Failed to verify code. Please try again.")
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [otp, email, router],
-  )
-
-  const handleOtpChange = useCallback(
-    (index: number, value: string) => {
-      if (value.length > 1) {
-        value = value.slice(0, 1)
-      }
-      const newOtp = [...otp]
-      newOtp[index] = value
-      setOtp(newOtp)
-
-      // Move to next input if current one is filled
-      if (value !== "" && index < 5) {
-        const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement
-        if (nextInput) {
-          nextInput.focus()
-        }
-      }
-    },
-    [otp],
-  )
-
-  const handleResendOTP = useCallback(async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     try {
+      const email = localStorage.getItem("verificationEmail")
+      if (!email) {
+        throw new Error("Email not found. Please try signing up again.")
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp.join(""),
+        type: "signup",
+      })
+
+      if (error) throw error
+
+      localStorage.removeItem("verificationEmail")
+      router.push("/dashboard")
+    } catch (error: any) {
+      if (error.message.includes("Invalid otp")) {
+        setError("Invalid verification code. Please check and try again.")
+      } else if (error.message.includes("Token has expired")) {
+        setError("Verification code has expired. Please request a new one.")
+      } else {
+        setError("Failed to verify code. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      value = value.slice(0, 1)
+    }
+    const newOtp = [...otp]
+    newOtp[index] = value
+    setOtp(newOtp)
+
+    // Move to next input if current one is filled
+    if (value !== "" && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement
+      if (nextInput) {
+        nextInput.focus()
+      }
+    }
+  }
+
+  const handleResendOTP = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const email = localStorage.getItem("verificationEmail")
       if (!email) {
         throw new Error("Email not found. Please try signing up again.")
       }
@@ -120,16 +116,12 @@ const VerifyOTP = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [email])
+  }
 
-  const formatTime = useCallback((seconds: number) => {
+  const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
-  }, [])
-
-  if (!email) {
-    return null
   }
 
   return (
@@ -207,6 +199,4 @@ const VerifyOTP = () => {
     </div>
   )
 }
-
-export default React.memo(VerifyOTP)
 

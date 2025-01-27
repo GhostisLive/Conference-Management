@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
@@ -12,7 +12,7 @@ import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { ReCaptcha } from "@/components/ReCaptcha"
 import { motion } from "framer-motion"
 
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [recaptchaToken, setRecaptchaToken] = useState("")
@@ -21,35 +21,32 @@ const Login = () => {
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!recaptchaToken) {
-        setError("Please complete the reCAPTCHA")
-        return
-      }
-      // TODO: Verify reCAPTCHA token
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!recaptchaToken) {
+      setError("Please complete the reCAPTCHA")
+      return
+    }
+    // TODO: Verify reCAPTCHA token
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (error) throw error
+      if (error) throw error
 
-        router.push("/dashboard")
-      } catch (error) {
-        setError("Failed to log in. Please check your credentials and try again.")
-      }
-    },
-    [email, password, recaptchaToken, router, supabase.auth],
-  )
+      router.push("/dashboard")
+    } catch (error) {
+      setError("Failed to log in. Please check your credentials and try again.")
+    }
+  }
 
-  const handleRecaptchaVerify = useCallback((token: string | null) => {
+  const handleRecaptchaVerify = (token: string | null) => {
     setRecaptchaToken(token || "")
     setError(null)
-  }, [])
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -159,6 +156,4 @@ const Login = () => {
     </div>
   )
 }
-
-export default React.memo(Login)
 

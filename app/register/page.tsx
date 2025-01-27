@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
@@ -12,7 +12,7 @@ import { User, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { ReCaptcha } from "@/components/ReCaptcha"
 import { motion } from "framer-motion"
 
-const Register = () => {
+export default function Register() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -22,48 +22,45 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      setIsLoading(true)
-      if (!recaptchaToken) {
-        setError("Please complete the reCAPTCHA")
-        setIsLoading(false)
-        return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    if (!recaptchaToken) {
+      setError("Please complete the reCAPTCHA")
+      setIsLoading(false)
+      return
+    }
+    // TODO: Verify reCAPTCHA token
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) throw error
+
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error("User already registered. Please sign in.")
       }
-      // TODO: Verify reCAPTCHA token
 
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        })
+      localStorage.setItem("verificationEmail", email)
+      router.push("/verify-otp")
+    } catch (error: any) {
+      setError(error.message || "Failed to create user. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-        if (error) throw error
-
-        if (data.user && data.user.identities && data.user.identities.length === 0) {
-          throw new Error("User already registered. Please sign in.")
-        }
-
-        // Instead of using localStorage, pass the email as a query parameter
-        router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
-      } catch (error: any) {
-        setError(error.message || "Failed to create user. Please try again.")
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [name, email, password, recaptchaToken, router],
-  )
-
-  const handleRecaptchaVerify = useCallback((token: string | null) => {
-    setRecaptchaToken(token || "")
+  const handleRecaptchaVerify = (token: string | null) => {
+    setRecaptchaToken(token || '')
     setError(null)
-  }, [])
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -148,6 +145,7 @@ const Register = () => {
                   </div>
                 </div>
                 <ReCaptcha onVerify={handleRecaptchaVerify} />
+                
                 {error && (
                   <p className="text-sm text-red-500" role="alert">
                     {error}
@@ -186,6 +184,4 @@ const Register = () => {
     </div>
   )
 }
-
-export default React.memo(Register)
 
